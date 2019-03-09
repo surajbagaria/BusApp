@@ -2,4 +2,14 @@
 
 {% block body %}
   <h1>Dashboard <small>Welcome {{session.username}}</small></h1>
+  {% from "includes/_formhelpers.html" import render_field %}
+  <form method="POST" action="">
+    <div class="form-group">
+      {{render_field(form.origin, class_="form-control")}}
+    </div>
+    <div class="form-group">
+      {{render_field(form.destination, class_="form-control")}}
+    </div>
+    <p><input type="submit" class="btn btn-primary" value="Search"></p>
+  </form>
 {% endblock %}

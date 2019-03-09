@@ -3,7 +3,11 @@ from data import Articles
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
+from flask_googlemaps import GoogleMaps
 import os
+import urllib.request
+import ssl
+import simplejson as json
 
 app = Flask(__name__)
 
@@ -17,6 +21,12 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 # init MySQL
 mysql = MySQL(app)
+
+#config GoogleMaps
+app.config['GOOGLEMAPS_KEY'] = "AIzaSyBf2CZVNafcGGeYFzG7w5JBOcFY6cHN6-4"
+
+#init GoogleMaps
+googlemaps = GoogleMaps(app)
 
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -47,6 +57,44 @@ class RegisterationForm(Form):
     password = PasswordField('Password', [validators.DataRequired(), validators.EqualTo('confirm', message='Pasword do not match')])
     confirm = PasswordField('Confirm Password')
 
+class DirectionForm(Form):
+    origin = StringField('Origin', [validators.Length(min=1, max=50)])
+    destination = StringField('Destination', [validators.Length(min=1, max=50)])
+
+#dashboard
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    endpoint = 'https://maps.googleapis.com/maps/api/directions/json?'
+    API_KEY = 'AIzaSyBf2CZVNafcGGeYFzG7w5JBOcFY6cHN6-4'
+    print(API_KEY)
+    form = DirectionForm(request.form)
+    if request.method == 'POST' and form.validate():
+        print('Inside')
+        origin = form.origin.data
+        ori = origin.replace(' ', '+')
+        destination = form.destination.data
+        dest = destination.replace(' ', '+')
+        nav_request = 'origin={}&destination={}&key={}'.format(ori, destX, API_KEY)
+        gcontext = ssl.SSLContext()
+        req = endpoint + nav_request
+        print(req)
+        response = urllib.request.urlopen(req, context=gcontext).read()
+        directions = json.loads(response)
+        end_loc=directions['routes'][0]['legs'][0]['end_location']
+        start_loc=directions['routes'][0]['legs'][0]['start_location']
+
+        print("the end loc is: ",end_loc)
+        print("the start loc is: ",start_loc)
+        session['logged_in'] = True
+        session['origin'] = origin
+        session['destination']= destination
+        #return render_template('dashboard.html', form=form)
+        return redirect(url_for('googletest'))
+    return render_template('dashboard.html',form=form)
+
+
+
+#register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterationForm(request.form)
@@ -113,11 +161,6 @@ def login():
     return render_template('login.html')
 
 
-#dashboard
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
-
 #logout
 @app.route('/logout')
 def logout():
@@ -125,6 +168,10 @@ def logout():
     flash('You are logged out', 'success')
     return redirect(url_for('login'))
 
+#google test
+@app.route('/googletest')
+def googletest():
+    return render_template('googletest.html')
 
 
 if __name__ == '__main__':
