@@ -2,12 +2,14 @@ from flask import Flask, render_template, flash, redirect, url_for, session, req
 from data import Articles
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
+from flask_recaptcha import ReCaptcha
 from passlib.hash import sha256_crypt
 from flask_googlemaps import GoogleMaps
 import os
 import urllib.request
 import ssl
 import simplejson as json
+import requests
 
 app = Flask(__name__)
 
@@ -27,6 +29,19 @@ app.config['GOOGLEMAPS_KEY'] = "AIzaSyBf2CZVNafcGGeYFzG7w5JBOcFY6cHN6-4"
 
 #init GoogleMaps
 googlemaps = GoogleMaps(app)
+
+#config Recaptcha
+siteKey = '6Ldnm5YUAAAAAJCB5ktHWwiE9NkLkl9uK71bJCMa'
+secretKey = '6Ldnm5YUAAAAANAOGEtd441_niZf8-nvAtvmt-l4'
+app.config.update({'RECAPTCHA_ENABLED': True,
+                   'RECAPTCHA_SITE_KEY':
+                       siteKey,
+                   'RECAPTCHA_SECRET_KEY':
+                       secretKey})
+
+
+#init Recaptcha
+recaptcha = ReCaptcha(app=app)
 
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -74,7 +89,7 @@ def dashboard():
         ori = origin.replace(' ', '+')
         destination = form.destination.data
         dest = destination.replace(' ', '+')
-        nav_request = 'origin={}&destination={}&key={}'.format(ori, destX, API_KEY)
+        nav_request = 'origin={}&destination={}&key={}'.format(ori, dest, API_KEY)
         gcontext = ssl.SSLContext()
         req = endpoint + nav_request
         print(req)
@@ -105,21 +120,23 @@ def register():
         email = form.email.data
         username = form.username.data
         password = sha256_crypt.hash(str(form.password.data))
-
-        #create Cursor
-
-        cur = mysql.connection.cursor()
-        cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
-
-        #commit to DB
-        mysql.connection.commit()
-
-        #close the connection
-        cur.close()
-
-        flash('you are now registered and can login', 'Success')
-
-        return redirect(url_for('login'))
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify',data = {'secret' : secretKey,'response' :request.form['g-recaptcha-response']})
+        google_response = json.loads(r.text)
+        print('JSON: ', google_response)
+        if google_response['success']:
+            print('SUCCESS')
+            #create Cursor
+            cur = mysql.connection.cursor()
+            cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
+            #commit to DB
+            mysql.connection.commit()
+            #close the connection
+            cur.close()
+            flash('you are now registered and can login', 'Success')
+            return redirect(url_for('login'))
+        else:
+            error = 'you may be a robot'
+            return render_template('register.html', error=error, form=form)
     return render_template('register.html', form=form)
 
 #User login
