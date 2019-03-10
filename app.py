@@ -100,11 +100,22 @@ def dashboard():
 
         print("the end loc is: ",end_loc)
         print("the start loc is: ",start_loc)
-        session['logged_in'] = True
         session['origin'] = origin
         session['destination']= destination
+        end_lat= end_loc['lat']
+        print(end_lat)
+        end_lng= end_loc['lng']
+        print(end_lng)
+        start_lat= start_loc['lat']
+        print(start_lat)
+        start_lng= start_loc['lng']
+        print(start_lng)
+        session['end_lat'] = end_lat
+        session['end_lng']= end_lng
+        session['start_lat'] = start_lat
+        session['start_lng']= start_lng
         #return render_template('dashboard.html', form=form)
-        return redirect(url_for('googletest'))
+        return redirect(url_for('what'))
     return render_template('dashboard.html',form=form)
 
 
@@ -189,6 +200,11 @@ def logout():
 @app.route('/googletest')
 def googletest():
     return render_template('googletest.html')
+
+#what test
+@app.route('/what')
+def what():
+    return render_template('what.html')
 
 
 if __name__ == '__main__':
