@@ -45,7 +45,7 @@ recaptcha = ReCaptcha(app=app)
 
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
-Articles = Articles()
+
 
 
 @app.route('/')
@@ -57,13 +57,7 @@ def index():
 def about():
     return render_template('about.html')
 
-@app.route('/articles')
-def articles():
-    return render_template('articles.html',articles=Articles)
 
-@app.route('/article/<string:id>/')
-def article(id):
-    return render_template('article.html',id=id)
 
 class RegisterationForm(Form):
     name= StringField('Name', [validators.Length(min=1, max=50)])
