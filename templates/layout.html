@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <title>MyAPP</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://www.gstatic.com/firebasejs/5.9.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.9.1/firebase-firestore.js"></script>
     <script src='https://www.google.com/recaptcha/api.js'></script>
   </head>
   <body>
@@ -12,7 +14,20 @@
       {% include 'includes/_messages.html' %}
       {% block body %}{% endblock %}
     </div>
-
+    <script>
+      // Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyCSktEAefIyJiApYjd94AveRjtGbNx2flM",
+        authDomain: "firestoredemo-c3174.firebaseapp.com",
+        databaseURL: "https://firestoredemo-c3174.firebaseio.com",
+        projectId: "firestoredemo-c3174",
+        storageBucket: "firestoredemo-c3174.appspot.com",
+        messagingSenderId: "788580872186"
+      };
+      firebase.initializeApp(config);
+      const db = firebase.firestore();
+      db.settings({timestampsInSnapshots : true});
+    </script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script src="//cdn.ckeditor.com/4.6.2/basic/ckeditor.js"></script>
     <script type="text/javascript">

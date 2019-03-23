@@ -10,6 +10,11 @@ import urllib.request
 import ssl
 import simplejson as json
 import requests
+#from google.cloud import storage
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
 
 app = Flask(__name__)
 
@@ -43,8 +48,17 @@ app.config.update({'RECAPTCHA_ENABLED': True,
 #init Recaptcha
 recaptcha = ReCaptcha(app=app)
 
+#config 511.org
+token_id = 'ccea4143-8013-4c3e-b3ac-40cf27125f15'
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
+
+#config firestore
+# Use the application default credentials
+cred = credentials.Certificate('firestoredemo-c3174-02794d56d4e5.json')
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 
 
@@ -130,13 +144,25 @@ def register():
         print('JSON: ', google_response)
         if google_response['success']:
             print('SUCCESS')
+            #--------------------------MySql------------------------------------------------------------------#
             #create Cursor
-            cur = mysql.connection.cursor()
-            cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
+            #//cur = mysql.connection.cursor()
+            #//cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
             #commit to DB
-            mysql.connection.commit()
+            #//mysql.connection.commit()
             #close the connection
-            cur.close()
+            #//cur.close()
+            #-------------------------MySql-----------------------------------------------------------------#
+
+            #------------------------Firestore--------------------------------------------------------------#
+            doc_ref = db.collection(u'users').document(username)
+            doc_ref.set({
+                u'name': name,
+                u'email': email,
+                u'username': username,
+                u'password': password
+            })
+            #------------------------Firestore--------------------------------------------------------------#
             flash('you are now registered and can login', 'Success')
             return redirect(url_for('login'))
         else:
@@ -152,34 +178,61 @@ def login():
         username = request.form['username']
         password_candidate = request.form['password']
 
+
+        #------------------------MySql--------------------------------------------------#
         #create Cursor
-        cur = mysql.connection.cursor()
+        #//cur = mysql.connection.cursor()
 
         #get user by Username
-        result = cur.execute("SELECT * FROM users WHERE username = %s", [username])
+        #//result = cur.execute("SELECT * FROM users WHERE username = %s", [username])
 
-        if result > 0:
+        #//if result > 0:
             #Get stored hash
-            data = cur.fetchone()
-            password = data['password']
+            #//data = cur.fetchone()
+            #//password = data['password']
 
             #compare Passwords
-            if sha256_crypt.verify(password_candidate, password):
+            #//if sha256_crypt.verify(password_candidate, password):
                 #Passed
-                session['logged_in'] = True
-                session['username'] = username
-                flash('you are now logged in', 'success')
-                return redirect(url_for('dashboard'))
+                #//session['logged_in'] = True
+                #//session['username'] = username
+                #//flash('you are now logged in', 'success')
+                #//return redirect(url_for('dashboard'))
 
 
-            else:
-                error = 'Invalid Login'
-                return render_template('login.html', error=error)
+            #//else:
+                #//error = 'Invalid Login'
+                #//return render_template('login.html', error=error)
             # Close connection
-            cur.close()
-        else:
-            error = 'Username not found'
-            return render_template('login.html', error=error)
+            #//cur.close()
+        #//else:
+            #//error = 'Username not found'
+            #//return render_template('login.html', error=error)
+        #-------------------MySql-------------------------------------#
+
+        #-------------------firestore-------------------------------------#
+        users_ref = db.collection(u'users')
+        docs = users_ref.get()
+        for doc in docs:
+            doc_dict = doc.to_dict();
+            if doc_dict['username'] == username:
+                print('User exist!!')
+                password = doc_dict['password']
+                if sha256_crypt.verify(password_candidate, password):
+                    #Passed
+                    print('Password Matched')
+                    session['logged_in'] = True
+                    session['username'] = username
+                    flash('you are now logged in', 'success')
+                    return redirect(url_for('dashboard'))
+                else:
+                    error = 'Invalid Login'
+                    return render_template('login.html', error=error)
+
+        error = 'Username not found'
+        return render_template('login.html', error=error)
+
+        #-------------------firestore-------------------------------------#
     return render_template('login.html')
 
 
