@@ -1,5 +1,7 @@
 from flask import Flask, render_template, flash, redirect, url_for, session, request, logging
 from data import Articles
+from gtfs_sample import GTFS_info# Experimental code
+from distance import get_distance# Experimental code
 from flask_mysqldb import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from flask_recaptcha import ReCaptcha
@@ -14,6 +16,8 @@ import requests
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from google.transit import gtfs_realtime_pb2 #Experimental code
+from math import sin, cos, sqrt, atan2, radians
 
 
 app = Flask(__name__)
@@ -122,8 +126,40 @@ def dashboard():
         session['end_lng']= end_lng
         session['start_lat'] = start_lat
         session['start_lng']= start_lng
+        #-------------------Experimental code(start)----------------------------#
+        xm = (start_lat + end_lat)/2;
+        ym = (start_lng + end_lng)/2;
+        mid_loc = {'lat': xm, 'lng': ym};
+        radii = get_distance(start_lat, start_lng, xm, ym)
+        print('radii ', radii)
+        information = GTFS_info()
+        print('length before ', len(information))
+        updated_info = {}
+        for k,v in information.items():
+            x1 = v[0]
+            y1 = v[1]
+            candidate = get_distance(xm, ym, x1, y1)
+            print('candidate distance ', candidate)
+            print('radii', radii)
+            if candidate < radii:
+                print('Yes')
+                t = int(k)
+                updated_info[t] = v
+        print('updated len ', len(updated_info))
+        session['bus_dict'] = updated_info
+
+        #temp_json = json.dumps(updated_info)
+        #json_information = json.loads(temp_json)
+        #print('JSON', temp_json)
+        temp_loc = information['1210']
+        session['temp_lat'] = temp_loc[0]
+        session['temp_lng'] = temp_loc[1]
+        #-------------------Experimental code(end)----------------------------#
         #return render_template('dashboard.html', form=form)
-        return redirect(url_for('what'))
+        #return redirect(url_for('what'))#don't miss it.
+        print('tyepjhg', type(updated_info))
+        print(updated_info)
+        return render_template('what.html', data=updated_info)
     return render_template('dashboard.html',form=form)
 
 
