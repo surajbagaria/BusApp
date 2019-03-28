@@ -17,7 +17,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from google.transit import gtfs_realtime_pb2 #Experimental code
-from math import sin, cos, sqrt, atan2, radians
+from math import sin, cos, sqrt, atan2, radians, inf
+from google.cloud import datastore
 
 
 app = Flask(__name__)
@@ -61,6 +62,15 @@ app.config['SECRET_KEY'] = SECRET_KEY
 # Use the application default credentials
 cred = credentials.Certificate('firestoredemo-c3174-02794d56d4e5.json')
 firebase_admin.initialize_app(cred)
+
+#config datastore
+def create_client(project_id):
+    return datastore.Client(project_id)
+
+def get_client():
+    return datastore.Client(current_app.config['datastoredemo-234300'])
+create_client('datastoredemo-234300')
+datastore_client = datastore.Client()
 
 db = firestore.client()
 
@@ -141,25 +151,42 @@ def dashboard():
             candidate = get_distance(xm, ym, x1, y1)
             print('candidate distance ', candidate)
             print('radii', radii)
-            if candidate < radii:
+            if candidate > radii:
                 print('Yes')
                 t = int(k)
                 updated_info[t] = v
         print('updated len ', len(updated_info))
-        session['bus_dict'] = updated_info
-
+        #session['bus_dict'] = updated_info
+        min = 100000000.0
+        for k,v in updated_info.items():
+            xi = v[0]
+            yi = v[1]
+            candidatei = get_distance(start_lat, start_lng, xi, yi)
+            print('candidate distance I ', candidatei)
+            if candidatei < min:
+                min = candidatei
+        print("min ", min)
+        final_value = {}
+        for k,v in updated_info.items():
+            xii = v[0]
+            yii = v[1]
+            candidateii = get_distance(start_lat, start_lng, xii, yii)
+            print("cand", candidateii)
+            if candidateii == min:
+                final_value[k] = v
+        print("selected ", final_value)
         #temp_json = json.dumps(updated_info)
         #json_information = json.loads(temp_json)
         #print('JSON', temp_json)
-        temp_loc = information['1210']
-        session['temp_lat'] = temp_loc[0]
-        session['temp_lng'] = temp_loc[1]
+        #temp_loc = information['1210']
+        #session['temp_lat'] = temp_loc[0]
+        #session['temp_lng'] = temp_loc[1]
         #-------------------Experimental code(end)----------------------------#
         #return render_template('dashboard.html', form=form)
         #return redirect(url_for('what'))#don't miss it.
-        print('tyepjhg', type(updated_info))
-        print(updated_info)
-        return render_template('what.html', data=updated_info)
+        print('tyepjhg', type(final_value))
+        #print(updated_info)
+        return render_template('what.html', data=final_value)
     return render_template('dashboard.html',form=form)
 
 
@@ -191,14 +218,17 @@ def register():
             #-------------------------MySql-----------------------------------------------------------------#
 
             #------------------------Firestore--------------------------------------------------------------#
-            doc_ref = db.collection(u'users').document(username)
-            doc_ref.set({
-                u'name': name,
-                u'email': email,
-                u'username': username,
-                u'password': password
-            })
+            #//doc_ref = db.collection(u'users').document(username)
+            #//doc_ref.set({
+                #//u'name': name,
+                #//u'email': email,
+                #//u'username': username,
+                #//u'password': password
+            #//})
             #------------------------Firestore--------------------------------------------------------------#
+            #------------------------datastore--------------------------------------------------------------#
+            add_user(name, email, username, password)
+            #------------------------datastore--------------------------------------------------------------#
             flash('you are now registered and can login', 'Success')
             return redirect(url_for('login'))
         else:
@@ -247,28 +277,49 @@ def login():
         #-------------------MySql-------------------------------------#
 
         #-------------------firestore-------------------------------------#
-        users_ref = db.collection(u'users')
-        docs = users_ref.get()
-        for doc in docs:
-            doc_dict = doc.to_dict();
-            if doc_dict['username'] == username:
-                print('User exist!!')
-                password = doc_dict['password']
-                if sha256_crypt.verify(password_candidate, password):
+        #//users_ref = db.collection(u'users')
+        #//docs = users_ref.get()
+        #//for doc in docs:
+            #//doc_dict = doc.to_dict();
+            #//if doc_dict['username'] == username:
+                #//print('User exist!!')
+                #//password = doc_dict['password']
+                #//if sha256_crypt.verify(password_candidate, password):
                     #Passed
+                    #//print('Password Matched')
+                    #//session['logged_in'] = True
+                    #//session['username'] = username
+                    #//flash('you are now logged in', 'success')
+                    #//return redirect(url_for('dashboard'))
+                #//else:
+                    #//error = 'Invalid Login'
+                    #//return render_template('login.html', error=error)
+
+        #//error = 'Username not found'
+        #//return render_template('login.html', error=error)
+
+        #-------------------firestore-------------------------------------#
+        #-------------------datastore-------------------------------------#
+        print('Username', username)
+        query = datastore_client.query(kind='username')
+        results = list(query.fetch())
+        for result in results:
+            if result['username'] == username:
+                print('User exist')
+                password = result['password']
+                if sha256_crypt.verify(password_candidate, password):
+                #Passed
                     print('Password Matched')
                     session['logged_in'] = True
                     session['username'] = username
                     flash('you are now logged in', 'success')
                     return redirect(url_for('dashboard'))
                 else:
-                    error = 'Invalid Login'
+                    error= 'Invalid login'
                     return render_template('login.html', error=error)
-
         error = 'Username not found'
         return render_template('login.html', error=error)
-
-        #-------------------firestore-------------------------------------#
+        #-------------------datastore-------------------------------------#
     return render_template('login.html')
 
 
@@ -288,6 +339,20 @@ def googletest():
 @app.route('/what')
 def what():
     return render_template('what.html')
+
+
+def add_user(name, email, username, password):
+    entity = datastore.Entity(key=datastore_client.key('username'))
+    entity.update({
+        'name': name,
+        'email': email,
+        'username': username,
+        'password': password
+    })
+    datastore_client.put(entity)
+
+
+
 
 
 if __name__ == '__main__':

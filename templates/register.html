@@ -3,7 +3,7 @@
 {% block body %}
   <h1>Register</h1>
   {% from "includes/_formhelpers.html" import render_field %}
-  <form method="POST" action="">
+  <form method="POST" action="" id="form_id">
     <div class="form-group">
       {{render_field(form.name, class_="form-control")}}
     </div>
@@ -19,7 +19,22 @@
     <div class="form-group">
       {{render_field(form.confirm, class_="form-control")}}
     </div>
-    <div class="g-recaptcha" data-sitekey="6Ldnm5YUAAAAAJCB5ktHWwiE9NkLkl9uK71bJCMa"></div>
-    <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+    <div class="g-recaptcha" data-sitekey="6Ldnm5YUAAAAAJCB5ktHWwiE9NkLkl9uK71bJCMa" id="captcha"></div>
+    <p><input type="submit" class="btn btn-primary" value="Submit" onclick="return foo();"></p>
   </form>
+  <script>
+  function foo(){
+     var response = grecaptcha.getResponse();
+     console.log(response);
+     if(response != '0'){
+           //captcha validated and got response code
+           console.log("the captcha has been filled");
+           return true;
+     }else{
+           //not validated or not clicked
+           alert("Please fill the captcha!");
+           return false;
+     }
+}
+  </script>
 {% endblock %}

@@ -85,14 +85,14 @@
     var map;
     start_loc = {'lat': {{ session.start_lat }}, 'lng': {{ session.start_lng }}};
     end_loc = {'lat': {{ session.end_lat }}, 'lng': {{ session.end_lng }}};
-    bus_loc = {'lat': {{ session.temp_lat }}, 'lng': {{ session.temp_lng }}};
+    //bus_loc = {'lat': {{ session.temp_lat }}, 'lng': {{ session.temp_lng }}};
     bus_info = {{ data }}
     console.log(bus_info)
     console.log(typeof bus_info)
     //bus_info = console.log(typeof {{ session.bus_dict }})
     console.log(start_loc)
     console.log(end_loc)
-    console.log(bus_loc)
+    //console.log(bus_loc)
     //console.log(bus_dict)
     function initMap() {
       var directionsDisplay = new google.maps.DirectionsRenderer;
